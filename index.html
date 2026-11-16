@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Astrological Transit Charts</title>
+    
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#d4af37">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f4f7f6; 
+            margin: 0; padding: 5px; color: #333; 
+            display: flex; flex-direction: column;
+            height: 100vh; height: 100dvh; overflow: hidden; 
+        }
+        .container { 
+            width: 100%; max-width: 1200px; margin: 0 auto; 
+            background: white; padding: 10px; border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            flex: 1; display: flex; flex-direction: column;
+            overflow: hidden; position: relative;
+        }
+        .header-top {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; margin-bottom: 5px; margin-top: 5px;
+        }
+        .header-top h2 { margin: 0; color: #2c3e50; font-size: 1.1rem; }
+        .logo-titulo { width: 35px; height: 35px; object-fit: contain; border-radius: 50%; }
+        .top-buttons { position: absolute; top: 10px; right: 10px; z-index: 10; }
+        .btn-icono {
+            width: 28px; height: 28px; border-radius: 50%;
+            background-color: #ecf0f1; color: #34495e;
+            border: 1px solid #bdc3c7; font-weight: bold; font-size: 14px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .controls-top { 
+            display: flex; flex-wrap: wrap; justify-content: center; align-items: center; 
+            gap: 8px; margin-bottom: 5px; background: #eef2f5; 
+            padding: 5px; border-radius: 8px; flex-shrink: 0; 
+        }
+        label { font-weight: bold; font-size: 0.9rem; }
+        select, button { 
+            padding: 6px 10px; font-size: 0.9rem; border-radius: 6px; 
+            border: 1px solid #ccc; outline: none; 
+        }
+        button#btnGenerar { 
+            background-color: #3498db; color: white; 
+            border: none; cursor: pointer; font-weight: bold; 
+        }
+        .tools-bar { display: flex; gap: 10px; margin-bottom: 5px; flex-shrink: 0; }
+        .tool-btn {
+            flex: 1; background-color: #2c3e50; color: white;
+            border: none; padding: 8px; border-radius: 6px;
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .tool-btn:hover { background-color: #1a252f; }
+        .tool-btn.active { background-color: #e67e22; }
+        .settings-panel {
+            display: none; background: #f8f9fa; border: 1px solid #dee2e6;
+            border-radius: 8px; padding: 10px; margin-bottom: 5px;
+            flex-shrink: 0; max-height: 200px; overflow-y: auto;
+        }
+        .color-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;
+        }
+        .color-item { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: bold; }
+        .color-item input[type="color"] {
+            width: 30px; height: 30px; padding: 0; border: none; border-radius: 4px; cursor: pointer;
+        }
+        .range-item { display: flex; align-items: center; gap: 15px; padding: 10px; }
+        .range-item input[type="range"] { flex: 1; }
+        .chart-container { 
+            position: relative; width: 100%; flex: 1; min-height: 200px; overflow: hidden; 
+        }
+        .chart-container canvas { width: 100% !important; height: 100% !important; display: block; }
+        .controls-bottom {
+            display: flex; justify-content: center; align-items: center;
+            gap: 20px; padding: 5px 0; flex-shrink: 0;
+        }
+        .btn-control {
+            background-color: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7;
+            border-radius: 8px; padding: 6px 15px; font-size: 1.1rem;
+            font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* --- ESTILOS DEL MENÚ DE INSTALACIÓN PWA --- */
+        .install-modal {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .install-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 85%;
+            max-width: 350px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .install-content img {
+            width: 70px; height: 70px; border-radius: 15px; margin-bottom: 10px;
+        }
+        .install-content h3 {
+            margin: 0 0 10px 0; color: #2c3e50; font-size: 1.2rem;
+        }
+        .install-content p {
+            font-size: 0.9rem; color: #555; margin-bottom: 20px;
+        }
+        .btn-install-pwa {
+            background-color: #d4af37; /* Color dorado de tu ícono */
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .btn-close-modal {
+            position: absolute;
+            top: 10px; right: 10px;
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            color: #888;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-buttons">
+        <button class="btn-icono" onclick="alert('📌 How to read the chart:\n\n1. Use the (+ and -) buttons below to zoom.\n2. Tap and drag the chart to pan.\n3. Tap a line to see exact degrees.')">?</button>
+    </div>
+
+    <div class="header-top">
+        <img src="mi-logo.png" alt="Logo" class="logo-titulo" onerror="this.style.display='none'">
+        <h2>Astrological Transit Charts</h2>
+    </div>
+    
+    <div class="controls-top">
+        <div>
+            <label for="anioInicio">Year:</label>
+            <select id="anioInicio"></select>
+        </div>
+        <div>
+            <label for="modoVista">View:</label>
+            <select id="modoVista">
+                <option value="1anio">1 Year</option>
+                <option value="6anios">6 Years</option>
+            </select>
+        </div>
+        <button id="btnGenerar">Generate</button>
+    </div>
+
+    <div class="tools-bar">
+        <button id="btnToggleColors" class="tool-btn">🎨 Colors</button>
+        <button id="btnToggleThickness" class="tool-btn">📏 Line Thickness</button>
+    </div>
+
+    <div id="panelColors" class="settings-panel">
+        <div id="colorPickersContainer" class="color-grid"></div>
+    </div>
+
+    <div id="panelThickness" class="settings-panel">
+        <div class="range-item">
+            <label>Thickness:</label>
+            <input type="range" id="rangeThickness" min="1" max="6" step="0.5" value="2">
+            <span id="lblThickness" style="font-weight: bold; width: 40px; text-align: right;">2 px</span>
+        </div>
+    </div>
+
+    <div id="loading" style="display:none; text-align:center; font-weight:bold; color:#e67e22;">Calculating...</div>
+
+    <div class="chart-container">
+        <canvas id="graficoAstral"></canvas>
+    </div>
+
+    <div class="controls-bottom">
+        <button class="btn-control" id="btnZoomIn" title="Zoom In">➕</button>
+        <button class="btn-control" id="btnReset" title="Reset">🔄</button>
+        <button class="btn-control" id="btnZoomOut" title="Zoom Out">➖</button>
+    </div>
+</div>
+
+<!-- VENTANA EMERGENTE DE INSTALACIÓN -->
+<div id="pwaInstallModal" class="install-modal">
+    <div class="install-content">
+        <button id="btnCloseModal" class="btn-close-modal">&times;</button>
+        <img src="icon-192.png" alt="App Icon">
+        <h3>Install App</h3>
+        <p>Install this app on your device for quick access and offline use.</p>
+        <button id="btnInstallAction" class="btn-install-pwa">Install Now</button>
+    </div>
+</div>
+
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
